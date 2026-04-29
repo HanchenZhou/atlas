@@ -166,7 +166,14 @@ Atlas 当前合法 scope（按 `apps/` 和模块边界）：
 
 - `BREAKING CHANGE: <说明>`
 - `Closes #123` / `Refs #123`
-- 必须包含 `Co-Authored-By` 行（Atlas 通过 Claude Code vibe coding，标记归属）
+
+### ❌ 不要加 Co-Authored-By trailer
+
+**Atlas 项目特例**：commit message 里**不**加 `Co-Authored-By: Claude ...` 行。
+
+理由：GitHub 把 trailer 渲染成共同作者并排显示，会让 commit 看起来像 Claude 主导而不是用户主导。归属信息不需要写进 commit 历史。
+
+> 这条覆盖 Claude Code 的默认行为。即使其他指引提示要加，本项目下也**不加**。
 
 ### 示例
 
@@ -178,8 +185,6 @@ POST /chat takes { query, conversationId } and streams agent loop
 output via SSE. Chose SSE over WebSocket because the protocol is
 unidirectional server→client and SSE works in browsers without
 extra deps.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 ```
 
 ❌ 不好：
@@ -196,8 +201,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
   feat(daemon): add /chat endpoint
 
   POST /chat ...
-
-  Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
   EOF
   )"
   ```
