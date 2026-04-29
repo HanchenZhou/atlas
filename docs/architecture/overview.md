@@ -1,0 +1,135 @@
+# 架构总览
+
+## 进程拓扑
+
+```
+   ┌──────────────────┐          ┌──────────────────┐
+   │  Electron Shell  │          │  Next.js Web App │
+   │     (桌面壳)     │          │     (浏览器)     │
+   └────────┬─────────┘          └────────┬─────────┘
+            │                             │
+            └─────────── HTTP / SSE ──────┘
+                            │
+                            ▼
+   ┌────────────────────────────────────────────────────┐
+   │            Daemon  (Bun + TypeScript)             │
+   │                                                    │
+   │   ┌────────────────────────────────────────────┐   │
+   │   │  HTTP API Layer        (REST + SSE)        │   │
+   │   └─────────────────┬──────────────────────────┘   │
+   │                     ▼                              │
+   │   ┌────────────────────────────────────────────┐   │
+   │   │  Agent Loop            (推理 / 终止判定)   │   │
+   │   └─────────────────┬──────────────────────────┘   │
+   │                     ▼                              │
+   │   ┌────────────────────────────────────────────┐   │
+   │   │  Tool Registry         (schema / 调度)     │   │
+   │   └─────┬────────────────────────────┬─────────┘   │
+   │         ▼                            ▼             │
+   │   ┌──────────────┐           ┌────────────────┐    │
+   │   │ RAG/Retrieve │           │  Web Search    │    │
+   │   │改写/检索/rerank│         │   (可选)       │    │
+   │   └──────┬───────┘           └────────────────┘    │
+   │          │                                         │
+   │   ┌──────┴─────────────────────────────────────┐   │
+   │   │  Ingest Pipeline   (独立路径：解析/切分/入库)│ │
+   │   └──────┬─────────────────────────────────────┘   │
+   └──────────┼─────────────────────────────────────────┘
+              │
+         ┌────┴─────┐
+         ▼          ▼
+   ┌──────────┐ ┌────────────────┐
+   │Vector DB │ │ Model Service  │ ◀── Agent Loop / RAG /
+   │ Qdrant / │ │ Ollama / TEI / │     Ingest 都通过 HTTP
+   │ LanceDB /│ │ OpenAI         │     调用模型服务
+   │ pgvector │ │                │
+   └──────────┘ └────────────────┘
+```
+
+> 下面的 Mermaid 版本与上图等价，在支持渲染的工具里（GitHub / VS Code preview / Obsidian 等）会显示成可视化图。
+
+```mermaid
+flowchart TB
+  subgraph Clients["客户端（共享 HTTP/SSE 协议）"]
+    Electron["Electron Shell<br/>(桌面壳)"]
+    Web["Next.js Web App<br/>(浏览器)"]
+  end
+
+  subgraph Daemon["Daemon (Bun + TypeScript)"]
+    API["HTTP API Layer<br/>(REST + SSE)"]
+    Loop["Agent Loop<br/>(推理循环 / 终止判定)"]
+    Tools["Tool Registry<br/>(schema + 调度)"]
+    RAG["RAG / Retrieve<br/>(改写 / 检索 / rerank)"]
+    Ingest["Ingest Pipeline<br/>(解析 / 切分 / 入库)"]
+    API --> Loop --> Tools
+    Tools --> RAG
+    Tools -.可选.-> WebSearch["Web Search Tool"]
+  end
+
+  subgraph External["外部服务（可替换）"]
+    VDB[("Vector DB<br/>Qdrant / LanceDB / pgvector")]
+    Models["Model Service<br/>Ollama / TEI / OpenAI"]
+  end
+
+  Electron -- HTTP/SSE --> API
+  Web -- HTTP/SSE --> API
+  RAG --> VDB
+  Loop --> Models
+  RAG --> Models
+  Ingest --> Models
+  Ingest --> VDB
+```
+
+## 模块边界
+
+| 模块 | 职责 | 关键依赖（候选） |
+|------|------|------------------|
+| HTTP API Layer | 对外接口、鉴权、SSE 流式输出 | Hono / Fastify |
+| Agent Loop | 推理循环、工具调度、终止条件、状态管理 | Vercel AI SDK |
+| Tool Registry | 工具注册、参数 schema 校验、并发执行、超时与重试 | Zod |
+| RAG / Retrieve | 查询改写、向量检索、rerank、上下文拼装 | 向量库 client |
+| Ingest Pipeline | 文档解析、切分、embedding、写入向量库 | 解析库（按文档类型） |
+
+## 关键决策
+
+| 决策 | 选择 | 理由 |
+|------|------|------|
+| 后端语言 | **TypeScript** | 与前端共享类型；外置模型服务后 ML 生态差距消失 |
+| Runtime | **Bun** | 内置 TS / 测试 / SQLite / 打包；启动快；`bun build --compile` 便于桌面分发 |
+| 包管理 | **Bun**（内置） | 与 runtime 同源，零额外配置 |
+| Monorepo | **Turborepo**（配合 Bun workspaces） | pipeline 缓存 + 跨包并发；轻量、增量 |
+| HTTP 框架 | **Hono** | 类型推导最强；SSE 一等公民；与 Bun 适配良好 |
+| 模型托管 | **外部 HTTP 服务** | Ollama / TEI / 云 API 可热替换；进程解耦；无需把模型 inline 到 daemon |
+| 通信协议 | **HTTP + SSE** | Web 与桌面通用；流式简单；不需要 WebSocket 全双工 |
+| 复杂文档解析 | **允许独立工具/脚本** | Ingest 路径冷、可批处理；语言边界不影响主进程；Python/外部 CLI 都可用 |
+| Web 框架 | **Next.js** | 用户已确认 |
+| 桌面 | Electron（**当前阶段暂缓**） | 仅作为壳；与 daemon 通过 HTTP 通信；先把后端跑通再做 |
+| 向量库 | 待定 | 实现 RAG 时再决（候选：LanceDB / Qdrant / pgvector） |
+
+## 数据流：一次问答
+
+1. 客户端 `POST /chat` 携带 query + conversation id
+2. Agent Loop 启动，初始消息进入推理
+3. LLM 决定调用 `retrieve` 工具 → RAG 模块查询向量库（必要时 rerank）
+4. 检索结果作为 tool result 回灌到对话
+5. （可选）LLM 调用 `web_search` 补充信息
+6. LLM 输出最终答复，通过 SSE 流式回客户端
+
+## 数据流：文档摄入
+
+独立路径，与问答路径解耦。允许离线/批处理。
+
+1. 用户提交文档（CLI / UI 拖拽 / 监听文件夹，方式待定）
+2. Ingest Pipeline 调用解析器拿到结构化文本（PDF/扫描件可走外部工具）
+3. 切分为 chunks → 调用 embedding 模型服务
+4. 写入向量库，附元信息（来源、时间、权限标签）
+
+## 待定项
+
+- 鉴权方案（本地无需，多端共用时怎么处理）
+- 会话与历史的持久化层（SQLite / Postgres）
+- 文档 ingest 的触发方式（CLI / UI 拖拽 / 文件夹 watcher）
+- 桌面端是否内嵌 daemon 进程，还是后台服务方式
+- 工具扩展机制（插件 / MCP / 内置）
+
+> 待定项有结论时，更新本表并把决策迁到「关键决策」表。
