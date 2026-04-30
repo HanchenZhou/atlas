@@ -1,7 +1,21 @@
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { buildApp } from '../index';
 import type { Provider } from '../providers/types';
 import { ProviderRegistry } from '../providers/registry';
+import { FileSessionStore } from '../sessions/store';
+
+let sessionsDir: string;
+
+beforeEach(() => {
+  sessionsDir = mkdtempSync(join(tmpdir(), 'atlas-providers-test-'));
+});
+
+afterEach(() => {
+  rmSync(sessionsDir, { recursive: true, force: true });
+});
 
 function fakeProvider(overrides: Partial<Provider> = {}): Provider {
   return {
@@ -19,7 +33,7 @@ function fakeProvider(overrides: Partial<Provider> = {}): Provider {
 function appWith(p: Provider): ReturnType<typeof buildApp> {
   const registry = new ProviderRegistry();
   registry.register(p);
-  return buildApp({ registry });
+  return buildApp({ registry, sessions: new FileSessionStore(sessionsDir) });
 }
 
 describe('GET /providers', () => {

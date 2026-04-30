@@ -25,15 +25,17 @@ atlas/
 │   │   ├── tsconfig.json
 │   │   └── src/
 │   │       ├── index.ts        # buildApp + createDefaultRegistry（不带 IO 副作用）
-│   │       ├── server.ts       # Bun.serve 启动入口
-│   │       ├── http/           # HTTP 路由：/chat、/providers、SSE 编码
+│   │       ├── server.ts       # Bun.serve 启动入口；解析 config 并装配 IO 依赖
+│   │       ├── config/         # ATLAS_HOME / config.json 解析；派生 sessions/credentials 路径
+│   │       ├── http/           # HTTP 路由：/chat、/providers、/sessions、SSE 编码
 │   │       ├── agent/          # native agent loop（Vercel AI SDK），非 Claude 路径用
 │   │       │   └── loop.ts
-│   │       └── providers/      # provider 抽象 + 凭据存储 + 各家 adapter
-│   │           ├── types.ts
-│   │           ├── registry.ts
-│   │           ├── credentials.ts
-│   │           └── adapters/   # 每家 provider 一个文件：claude-cli.ts / openai.ts / kimi.ts
+│   │       ├── providers/      # provider 抽象 + 凭据存储 + 各家 adapter
+│   │       │   ├── types.ts
+│   │       │   ├── registry.ts
+│   │       │   ├── credentials.ts
+│   │       │   └── adapters/   # 每家 provider 一个文件：claude-cli.ts / openai.ts / kimi.ts
+│   │       └── sessions/       # 会话存储；当前仅 FileSessionStore（一会话一 JSON）
 │   └── desktop/                # 桌面端（Electron + Vite + React）
 │       ├── electron.vite.config.ts
 │       ├── index.html
@@ -62,6 +64,16 @@ atlas/
 | `apps/desktop/` | Electron 桌面端；通过 `localhost:3001` 调 daemon |
 | `.claude/skills/` | Claude Code 项目级 skills；当前包含 `git-workflow`、`tdd` |
 | `docs/` | 项目文档；维护规则参考 `docs/CLAUDE.md` |
+
+## 应用数据目录（运行时，仓库外）
+
+| 路径 | 内容 |
+|------|------|
+| `~/.atlas/config.json` | 应用配置：daemon port、默认 provider/model、`sessions.dir` |
+| `~/.atlas/credentials.json` | provider 凭据（0600） |
+| `~/.atlas/sessions/<id>.json` | 会话历史（一会话一文件） |
+
+整个 root 可由 `ATLAS_HOME` 环境变量覆盖；`sessions.dir` 还可在 `config.json` 里单独指向别处。
 
 ## 后续会出现的目录
 
