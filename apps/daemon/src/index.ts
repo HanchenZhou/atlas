@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { ProviderRegistry } from './providers/registry';
 import { claudeCliProvider } from './providers/adapters/claude-cli';
 import { openaiProvider } from './providers/adapters/openai';
@@ -15,6 +16,7 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
   const registry = opts.registry ?? createDefaultRegistry();
 
   const app = new Hono();
+  app.use('*', cors({ origin: (o) => o, allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'] }));
   app.get('/health', (c) => c.json({ status: 'ok' }));
   app.route('/providers', providersRouter(registry));
   app.route('/chat', chatRouter(registry));
