@@ -108,6 +108,30 @@ describe('FileSessionStore.appendMessage', () => {
   });
 });
 
+describe('FileSessionStore.replaceMessages', () => {
+  it('overwrites the whole message list', async () => {
+    const s = await store.create({ providerId: 'openai' });
+    await store.appendMessage(s.id, { role: 'user', content: 'turn 1' });
+    await store.appendMessage(s.id, { role: 'assistant', content: 'reply 1' });
+    const after = await store.replaceMessages(s.id, [
+      { role: 'system', content: 'compacted' },
+    ]);
+    expect(after.messages).toEqual([
+      { role: 'system', content: 'compacted' },
+    ]);
+    const reread = await store.get(s.id);
+    expect(reread?.messages).toEqual([
+      { role: 'system', content: 'compacted' },
+    ]);
+  });
+
+  it('throws when the session is missing', async () => {
+    await expect(
+      store.replaceMessages('nope', []),
+    ).rejects.toThrow(/nope/);
+  });
+});
+
 describe('FileSessionStore.setTitle', () => {
   it('overwrites the title and bumps updatedAt', async () => {
     const s = await store.create({ providerId: 'openai', title: 'old' });

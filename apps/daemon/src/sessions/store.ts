@@ -94,6 +94,18 @@ export class FileSessionStore {
     await this.write(session);
   }
 
+  async replaceMessages(
+    id: string,
+    messages: SessionMessage[],
+  ): Promise<Session> {
+    const session = await this.get(id);
+    if (!session) throw new Error(`session not found: ${id}`);
+    session.messages = messages;
+    session.updatedAt = new Date().toISOString();
+    await this.write(session);
+    return session;
+  }
+
   async delete(id: string): Promise<void> {
     try {
       await unlink(this.fileFor(id));

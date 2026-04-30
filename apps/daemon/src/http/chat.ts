@@ -4,6 +4,7 @@ import type { ProviderRegistry } from '../providers/registry';
 import type { AgentEvent, ProviderId } from '../providers/types';
 import type { RoleResolver } from '../roles/resolver';
 import type { FileSessionStore, Session } from '../sessions/store';
+import { maybeCompact } from '../tasks/compaction';
 import { generateTitle } from '../tasks/title';
 import { sseStream } from './sse';
 
@@ -58,6 +59,15 @@ export function chatRouter(
     }
 
     session = await store.appendMessage(session.id, parsed.data.message);
+
+    const compaction = await maybeCompact({
+      registry,
+      resolver: roles,
+      messages: session.messages,
+    });
+    if (compaction.compacted) {
+      session = await store.replaceMessages(session.id, compaction.messages);
+    }
 
     const ac = new AbortController();
     c.req.raw.signal.addEventListener('abort', () => ac.abort(), { once: true });
