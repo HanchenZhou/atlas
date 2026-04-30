@@ -27,11 +27,13 @@ atlas/
 │           ├── index.ts        # buildApp + createDefaultRegistry（不带 IO 副作用）
 │           ├── server.ts       # Bun.serve 启动入口
 │           ├── http/           # HTTP 路由：/chat、/providers、SSE 编码
+│           ├── agent/          # native agent loop（Vercel AI SDK），非 Claude 路径用
+│           │   └── loop.ts
 │           └── providers/      # provider 抽象 + 凭据存储 + 各家 adapter
 │               ├── types.ts
 │               ├── registry.ts
 │               ├── credentials.ts
-│               └── adapters/   # 每家 provider 一个文件，例 claude-cli.ts
+│               └── adapters/   # 每家 provider 一个文件：claude-cli.ts / openai.ts
 └── docs/                       # 项目文档
     ├── CLAUDE.md               # docs/ 职责说明（工作目录在 docs/ 下时自动加载）
     ├── architecture/
