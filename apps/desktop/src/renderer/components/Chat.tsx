@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { ChatTurn } from '../state/useAtlas';
 import type { ProviderInfo } from '../client/daemon';
+import { Markdown } from './Markdown';
 
 type Props = {
   messages: ChatTurn[];
@@ -42,7 +43,11 @@ export function Chat({ messages, streaming, activeProvider }: Props) {
             <div key={m.id} className={`msg ${m.role}`}>
               <div className="role">{m.role === 'user' ? 'You' : 'Atlas'}</div>
               <div className="content">
-                {m.content}
+                {m.role === 'assistant' ? (
+                  <Markdown>{m.content}</Markdown>
+                ) : (
+                  m.content
+                )}
                 {streaming && i === messages.length - 1 && m.role === 'assistant' && (
                   <span className="caret" aria-hidden="true" />
                 )}

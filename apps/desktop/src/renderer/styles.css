@@ -371,8 +371,13 @@ button { font: inherit; }
   font-size: 14.5px;
   line-height: 1.72;
   color: var(--text);
+}
+/* user messages are plain text — preserve typed line breaks */
+.msg.user .content {
   white-space: pre-wrap;
 }
+
+/* inline code (also applies to <code> inside <pre>, overridden below) */
 .msg .content code {
   font-family: 'Geist Mono', ui-monospace, Menlo, monospace;
   font-size: 13px;
@@ -380,6 +385,102 @@ button { font: inherit; }
   padding: 1px 5px;
   border-radius: 4px;
   color: var(--accent);
+}
+
+/* markdown block elements rendered for assistant messages */
+.msg.assistant .content > :first-child { margin-top: 0; }
+.msg.assistant .content > :last-child { margin-bottom: 0; }
+.msg.assistant .content p {
+  margin: 0 0 0.85em;
+}
+.msg.assistant .content h1,
+.msg.assistant .content h2,
+.msg.assistant .content h3,
+.msg.assistant .content h4 {
+  margin: 1.4em 0 0.5em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.msg.assistant .content h1 { font-size: 19px; }
+.msg.assistant .content h2 { font-size: 17px; }
+.msg.assistant .content h3 { font-size: 15.5px; }
+.msg.assistant .content h4 { font-size: 14.5px; }
+
+.msg.assistant .content ul,
+.msg.assistant .content ol {
+  margin: 0.4em 0 0.9em;
+  padding-left: 1.4em;
+}
+.msg.assistant .content li {
+  margin: 0.2em 0;
+}
+.msg.assistant .content li > p {
+  margin: 0 0 0.3em;
+}
+
+.msg.assistant .content blockquote {
+  margin: 0.6em 0 0.9em;
+  padding: 2px 14px;
+  border-left: 3px solid var(--accent);
+  color: var(--text-mute);
+}
+.msg.assistant .content blockquote p:last-child { margin-bottom: 0; }
+
+.msg.assistant .content pre {
+  margin: 0.7em 0 1em;
+  padding: 12px 14px;
+  background: var(--app);
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.msg.assistant .content pre code {
+  background: transparent;
+  padding: 0;
+  color: var(--text);
+  font-size: inherit;
+  border-radius: 0;
+}
+
+.msg.assistant .content a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+.msg.assistant .content a:hover {
+  color: var(--accent-hover);
+}
+
+.msg.assistant .content hr {
+  margin: 1.2em 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.msg.assistant .content table {
+  border-collapse: collapse;
+  margin: 0.7em 0 1em;
+  font-size: 13px;
+}
+.msg.assistant .content th,
+.msg.assistant .content td {
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  text-align: left;
+}
+.msg.assistant .content th {
+  background: var(--app);
+  font-weight: 600;
+}
+
+/* GFM task list checkboxes shouldn't look like form inputs */
+.msg.assistant .content input[type='checkbox'] {
+  margin-right: 6px;
+  accent-color: var(--accent);
 }
 
 .caret {
