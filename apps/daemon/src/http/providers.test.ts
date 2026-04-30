@@ -136,3 +136,32 @@ describe('DELETE /providers/:id/credential', () => {
     expect(calls).toBe(1);
   });
 });
+
+describe('CORS', () => {
+  it('reflects Origin on a real request so the renderer can read the response', async () => {
+    const app = appWith(fakeProvider());
+    const res = await app.request('/providers', {
+      headers: { Origin: 'http://localhost:5173' },
+    });
+    expect(res.headers.get('access-control-allow-origin')).toBe(
+      'http://localhost:5173',
+    );
+  });
+
+  it('answers OPTIONS preflight for POST /providers/:id/login', async () => {
+    const app = appWith(fakeProvider({ authMode: 'apiKey', login: async () => {} }));
+    const res = await app.request('/providers/anthropic-claude-cli/login', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'http://localhost:5173',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type',
+      },
+    });
+    expect(res.status).toBeLessThan(300);
+    expect(res.headers.get('access-control-allow-origin')).toBe(
+      'http://localhost:5173',
+    );
+    expect(res.headers.get('access-control-allow-methods') ?? '').toContain('POST');
+  });
+});

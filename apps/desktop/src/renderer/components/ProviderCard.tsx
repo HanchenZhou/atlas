@@ -102,12 +102,14 @@ function ApiKeyCard({
     setError(null);
   };
 
+  const showBaseUrl = provider.id !== 'kimi';
+
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
       const payload: { apiKey: string; baseUrl?: string } = { apiKey };
-      if (baseUrl.trim()) payload.baseUrl = baseUrl.trim();
+      if (showBaseUrl && baseUrl.trim()) payload.baseUrl = baseUrl.trim();
       await onLogin(payload);
       reset();
       setEditing(false);
@@ -152,8 +154,9 @@ function ApiKeyCard({
 
       {editing ? (
         <div className="provider-card-body">
-          Paste an API key. Optionally set a custom base URL for OpenAI-compatible
-          providers (Qwen, GLM, Kimi, DeepSeek, Ollama).
+          {showBaseUrl
+            ? 'Paste an API key. Optionally set a custom base URL for OpenAI-compatible providers (Qwen, GLM, DeepSeek, Ollama).'
+            : 'Paste your Kimi coding plan API key — the endpoint is fixed.'}
           <div className="field">
             <label htmlFor={`${provider.id}-apikey`}>API key</label>
             <input
@@ -165,18 +168,20 @@ function ApiKeyCard({
               onChange={(e) => setApiKey(e.target.value)}
             />
           </div>
-          <div className="field">
-            <label htmlFor={`${provider.id}-baseurl`}>
-              Base URL <span className="hint">(optional)</span>
-            </label>
-            <input
-              id={`${provider.id}-baseurl`}
-              type="text"
-              placeholder="https://api.openai.com/v1"
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-            />
-          </div>
+          {showBaseUrl && (
+            <div className="field">
+              <label htmlFor={`${provider.id}-baseurl`}>
+                Base URL <span className="hint">(optional)</span>
+              </label>
+              <input
+                id={`${provider.id}-baseurl`}
+                type="text"
+                placeholder="https://api.openai.com/v1"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+              />
+            </div>
+          )}
           {error && <div className="field err">{error}</div>}
           <div className="row-actions">
             {connected && (
