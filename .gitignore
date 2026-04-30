@@ -8,3 +8,6 @@ out/
 .env.local
 .idea/
 .vscode/
+
+# one-off design exploration scratchpads
+design-demos/

@@ -18,17 +18,15 @@ export function Chat({ messages, streaming, activeProvider }: Props) {
   return (
     <>
       <div className="chat-head">
-        <div>
-          <div className="title">
-            {messages.length === 0 ? 'New conversation' : 'Conversation'}
-          </div>
-          <div className="sub">
-            {activeProvider
-              ? `${activeProvider.displayName} · ${activeProvider.authMode === 'cli-passthrough' ? 'subscription' : 'api key'}`
-              : 'No provider selected'}
-          </div>
-        </div>
-        <div className="spacer" />
+        <span className="title">
+          {messages.length === 0 ? 'New conversation' : 'Conversation'}
+        </span>
+        <span className="sub">
+          {activeProvider
+            ? `${activeProvider.displayName} · ${activeProvider.authMode === 'cli-passthrough' ? 'subscription' : 'api key'}`
+            : 'No provider selected'}
+        </span>
+        <span className="spacer" />
       </div>
 
       <div className="messages" ref={scrollRef}>

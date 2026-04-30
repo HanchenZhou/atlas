@@ -8,7 +8,7 @@ function createWindow(): void {
     minWidth: 720,
     minHeight: 480,
     titleBarStyle: 'hiddenInset',
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#0b0b0b' : '#ffffff',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#1a1714' : '#f4f0e8',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true,
