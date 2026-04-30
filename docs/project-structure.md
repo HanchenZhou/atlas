@@ -20,20 +20,32 @@ atlas/
 │       └── tdd/                # 测试驱动开发流程与规范
 │           └── SKILL.md
 ├── apps/
-│   └── daemon/                 # 后端 daemon（Bun + Hono）
-│       ├── package.json
-│       ├── tsconfig.json
+│   ├── daemon/                 # 后端 daemon（Bun + Hono）
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── src/
+│   │       ├── index.ts        # buildApp + createDefaultRegistry（不带 IO 副作用）
+│   │       ├── server.ts       # Bun.serve 启动入口
+│   │       ├── http/           # HTTP 路由：/chat、/providers、SSE 编码
+│   │       ├── agent/          # native agent loop（Vercel AI SDK），非 Claude 路径用
+│   │       │   └── loop.ts
+│   │       └── providers/      # provider 抽象 + 凭据存储 + 各家 adapter
+│   │           ├── types.ts
+│   │           ├── registry.ts
+│   │           ├── credentials.ts
+│   │           └── adapters/   # 每家 provider 一个文件：claude-cli.ts / openai.ts
+│   └── desktop/                # 桌面端（Electron + Vite + React）
+│       ├── electron.vite.config.ts
+│       ├── index.html
 │       └── src/
-│           ├── index.ts        # buildApp + createDefaultRegistry（不带 IO 副作用）
-│           ├── server.ts       # Bun.serve 启动入口
-│           ├── http/           # HTTP 路由：/chat、/providers、SSE 编码
-│           ├── agent/          # native agent loop（Vercel AI SDK），非 Claude 路径用
-│           │   └── loop.ts
-│           └── providers/      # provider 抽象 + 凭据存储 + 各家 adapter
-│               ├── types.ts
-│               ├── registry.ts
-│               ├── credentials.ts
-│               └── adapters/   # 每家 provider 一个文件：claude-cli.ts / openai.ts
+│           ├── main/           # Electron main process（窗口、生命周期）
+│           ├── preload/        # contextBridge 占位（v1 不用 IPC）
+│           └── renderer/       # React 渲染端
+│               ├── App.tsx     # 根组件，编排 Sidebar / Chat / Composer / SettingsSheet
+│               ├── styles.css  # monotone tokens（CSS vars，跟随系统色）
+│               ├── client/     # daemon HTTP/SSE 客户端
+│               ├── components/ # 视图组件
+│               └── state/      # useReducer-based store
 └── docs/                       # 项目文档
     ├── CLAUDE.md               # docs/ 职责说明（工作目录在 docs/ 下时自动加载）
     ├── architecture/
@@ -47,6 +59,7 @@ atlas/
 | 目录 | 职责 |
 |------|------|
 | `apps/daemon/` | 后端 daemon HTTP 服务；将承载 HTTP API、Agent Loop、Tool Registry、RAG、Ingest |
+| `apps/desktop/` | Electron 桌面端；通过 `localhost:3001` 调 daemon |
 | `.claude/skills/` | Claude Code 项目级 skills；当前包含 `git-workflow`、`tdd` |
 | `docs/` | 项目文档；维护规则参考 `docs/CLAUDE.md` |
 
@@ -57,6 +70,5 @@ atlas/
 | 预期目录 | 预期职责 |
 |---------|---------|
 | `apps/web/` | Next.js Web 端，调用 daemon HTTP API |
-| `apps/desktop/` | Electron 壳；当前阶段暂缓 |
 | `packages/shared/` | 客户端与 daemon 共用的类型、协议定义 |
 | `tools/` | 独立 CLI 工具，例如复杂文档预处理脚本 |
