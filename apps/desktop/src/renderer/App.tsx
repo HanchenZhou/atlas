@@ -92,30 +92,27 @@ export function App() {
 
   return (
     <div className="app">
-      <div className="titlebar">Atlas</div>
-      <div className="body">
-        <Sidebar
-          providers={state.providers}
-          activeProviderId={state.activeProviderId}
-          onNewChat={() => dispatch({ type: 'messages/clear' })}
-          onOpenSettings={() => dispatch({ type: 'settings/toggle', show: true })}
+      <Sidebar
+        providers={state.providers}
+        activeProviderId={state.activeProviderId}
+        onNewChat={() => dispatch({ type: 'messages/clear' })}
+        onOpenSettings={() => dispatch({ type: 'settings/toggle', show: true })}
+        onCycleProvider={cycleProvider}
+      />
+      <main className="chat">
+        <Chat
+          messages={state.messages}
+          streaming={state.streaming}
+          activeProvider={activeProvider}
+        />
+        <Composer
+          activeProvider={activeProvider}
+          disabled={!state.daemonReachable}
+          streaming={state.streaming}
+          onSend={send}
           onCycleProvider={cycleProvider}
         />
-        <main className="chat">
-          <Chat
-            messages={state.messages}
-            streaming={state.streaming}
-            activeProvider={activeProvider}
-          />
-          <Composer
-            activeProvider={activeProvider}
-            disabled={!state.daemonReachable}
-            streaming={state.streaming}
-            onSend={send}
-            onCycleProvider={cycleProvider}
-          />
-        </main>
-      </div>
+      </main>
 
       <SettingsSheet
         open={state.showSettings}

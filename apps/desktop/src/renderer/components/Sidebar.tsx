@@ -19,9 +19,15 @@ export function Sidebar({
   const active = providers.find((p) => p.id === activeProviderId);
   return (
     <aside className="sidebar">
+      <div className="brand">
+        <div className="logo">A</div>
+        <div className="name">Atlas</div>
+      </div>
+
       <button className="new" onClick={onNewChat} type="button">
         <PlusIcon />
-        New chat
+        <span className="label">New chat</span>
+        <span className="k">⌘N</span>
       </button>
 
       <div className="group-label">Conversations</div>
@@ -37,10 +43,8 @@ export function Sidebar({
             className={`dot ${active?.status.loggedIn ? 'on' : 'off'}`}
             aria-hidden="true"
           />
-          <span>{active?.displayName ?? 'No provider'}</span>
-          <span style={{ marginLeft: 'auto', color: 'var(--text-faint)', fontSize: 11 }}>
-            ▾
-          </span>
+          <span style={{ flex: 1 }}>{active?.displayName ?? 'No provider'}</span>
+          <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>▾</span>
         </button>
         <button className="pill" type="button" onClick={onOpenSettings}>
           <GearIcon />
