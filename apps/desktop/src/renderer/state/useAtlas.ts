@@ -1,5 +1,5 @@
 import { useEffect, useReducer } from 'react';
-import type { ProviderInfo } from '../client/daemon';
+import type { ProviderInfo, Session, SessionSummary } from '../client/daemon';
 
 export type ThemePref = 'light' | 'dark' | 'system';
 
@@ -13,6 +13,8 @@ export type AtlasState = {
   theme: ThemePref;
   providers: ProviderInfo[];
   activeProviderId: string | null;
+  sessions: SessionSummary[];
+  currentSessionId: string | null;
   messages: ChatTurn[];
   streaming: boolean;
   showSettings: boolean;
@@ -23,12 +25,15 @@ type Action =
   | { type: 'theme/set'; theme: ThemePref }
   | { type: 'providers/set'; providers: ProviderInfo[] }
   | { type: 'provider/activate'; id: string }
+  | { type: 'sessions/set'; sessions: SessionSummary[] }
+  | { type: 'session/set-current'; id: string | null }
+  | { type: 'session/load'; session: Session }
   | { type: 'settings/toggle'; show?: boolean }
   | { type: 'message/append-user'; content: string }
   | { type: 'message/start-assistant'; id: string }
   | { type: 'message/append-delta'; id: string; text: string }
   | { type: 'message/finish-assistant'; id: string }
-  | { type: 'messages/clear' }
+  | { type: 'session/new' }
   | { type: 'daemon/reachable'; reachable: boolean };
 
 function reducer(state: AtlasState, action: Action): AtlasState {
@@ -47,6 +52,22 @@ function reducer(state: AtlasState, action: Action): AtlasState {
     }
     case 'provider/activate':
       return { ...state, activeProviderId: action.id };
+    case 'sessions/set':
+      return { ...state, sessions: action.sessions };
+    case 'session/set-current':
+      return { ...state, currentSessionId: action.id };
+    case 'session/load':
+      return {
+        ...state,
+        currentSessionId: action.session.id,
+        activeProviderId: action.session.providerId,
+        messages: action.session.messages
+          .filter((m): m is { role: 'user' | 'assistant'; content: string } =>
+            m.role === 'user' || m.role === 'assistant',
+          )
+          .map((m) => ({ id: crypto.randomUUID(), ...m })),
+        streaming: false,
+      };
     case 'settings/toggle':
       return {
         ...state,
@@ -78,8 +99,13 @@ function reducer(state: AtlasState, action: Action): AtlasState {
       };
     case 'message/finish-assistant':
       return { ...state, streaming: false };
-    case 'messages/clear':
-      return { ...state, messages: [], streaming: false };
+    case 'session/new':
+      return {
+        ...state,
+        currentSessionId: null,
+        messages: [],
+        streaming: false,
+      };
     case 'daemon/reachable':
       return { ...state, daemonReachable: action.reachable };
     default:
@@ -110,6 +136,8 @@ export function useAtlas() {
     theme: readStoredTheme(),
     providers: [],
     activeProviderId: null,
+    sessions: [],
+    currentSessionId: null,
     messages: [],
     streaming: false,
     showSettings: false,
