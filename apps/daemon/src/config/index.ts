@@ -1,13 +1,15 @@
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, join } from 'node:path';
+import type { RoleConfig } from '../roles/resolver';
 
 export type AppConfig = {
   home: string;
   daemon: { port: number };
-  defaults: { providerId?: string; model?: string };
+  defaults: RoleConfig;
   sessions: { dir: string };
   credentialsPath: string;
+  roles: Record<string, RoleConfig>;
 };
 
 const DEFAULT_PORT = 3001;
@@ -54,11 +56,13 @@ export async function loadConfig(home?: string): Promise<AppConfig> {
     },
     sessions: { dir: sessionsDir },
     credentialsPath: join(root, 'credentials.json'),
+    roles: parsed.roles ?? {},
   };
 }
 
 type RawConfig = {
   daemon?: { port?: number };
-  defaults?: { providerId?: string; model?: string };
+  defaults?: RoleConfig;
   sessions?: { dir?: string };
+  roles?: Record<string, RoleConfig>;
 };

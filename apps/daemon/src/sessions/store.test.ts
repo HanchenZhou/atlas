@@ -108,6 +108,21 @@ describe('FileSessionStore.appendMessage', () => {
   });
 });
 
+describe('FileSessionStore.setTitle', () => {
+  it('overwrites the title and bumps updatedAt', async () => {
+    const s = await store.create({ providerId: 'openai', title: 'old' });
+    await new Promise((r) => setTimeout(r, 5));
+    await store.setTitle(s.id, 'new title');
+    const got = await store.get(s.id);
+    expect(got?.title).toBe('new title');
+    expect((got?.updatedAt ?? '') > s.updatedAt).toBe(true);
+  });
+
+  it('is a no-op for unknown id', async () => {
+    await store.setTitle('nope', 'hello');
+  });
+});
+
 describe('FileSessionStore.delete', () => {
   it('removes the session', async () => {
     const s = await store.create({ providerId: 'openai' });

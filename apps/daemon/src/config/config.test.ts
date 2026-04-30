@@ -36,6 +36,25 @@ describe('loadConfig', () => {
     expect(cfg.defaults).toEqual({});
     expect(cfg.sessions.dir).toBe(join(home, 'sessions'));
     expect(cfg.credentialsPath).toBe(join(home, 'credentials.json'));
+    expect(cfg.roles).toEqual({});
+  });
+
+  it('reads role overrides from config.json', async () => {
+    writeFileSync(
+      join(home, 'config.json'),
+      JSON.stringify({
+        roles: {
+          title: { model: 'k2-fast' },
+          compaction: { providerId: 'openai', model: 'gpt-4o-mini' },
+        },
+      }),
+    );
+    const cfg = await loadConfig(home);
+    expect(cfg.roles.title).toEqual({ model: 'k2-fast' });
+    expect(cfg.roles.compaction).toEqual({
+      providerId: 'openai',
+      model: 'gpt-4o-mini',
+    });
   });
 
   it('reads daemon.port from config.json', async () => {

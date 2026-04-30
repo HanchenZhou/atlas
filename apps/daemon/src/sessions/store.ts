@@ -86,6 +86,14 @@ export class FileSessionStore {
     return session;
   }
 
+  async setTitle(id: string, title: string): Promise<void> {
+    const session = await this.get(id);
+    if (!session) return;
+    session.title = title;
+    session.updatedAt = new Date().toISOString();
+    await this.write(session);
+  }
+
   async delete(id: string): Promise<void> {
     try {
       await unlink(this.fileFor(id));
