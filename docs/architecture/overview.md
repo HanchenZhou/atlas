@@ -118,18 +118,23 @@ flowchart TB
 | 桌面 | Electron（**当前阶段暂缓**） | 仅作为壳；与 daemon 通过 HTTP 通信；先把后端跑通再做 |
 | Agent Loop（native） | **Vercel AI SDK** | provider 抽象 + 流式 + tool calling + maxSteps 一站式；多家 LLM 不需要自己写 SSE 解析 |
 | Anthropic 订阅接入 | **Claude SDK passthrough** | 订阅 OAuth 凭据躺在本机 `claude` CLI 里，没有"裸调 LLM"接口可走；只能 spawn SDK 让它跑整轮 loop |
+| 应用数据目录 | **`~/.atlas/`**（可由 `ATLAS_HOME` 覆盖） | 单一 root 收纳配置 / 凭据 / 会话；环境变量覆盖便于测试隔离与多 profile |
+| 应用配置 | **`~/.atlas/config.json`** | 起步只放 daemon port、默认 provider/model、`sessions.dir`；hand-edit 即可 |
 | Provider 凭据存储 | **`~/.atlas/credentials.json` + 0600** | 早期单机单用户；不上 keychain（YAGNI），后续多端共享时再换 |
+| 会话持久化 | **per-session JSON 文件**（默认 `~/.atlas/sessions/<id>.json`） | 一会话一文件、原子 rename 写入；本地几百会话足够；`config.sessions.dir` 可改路径，未来要 PG 直接换 store 实现 |
 | 向量库 | 待定 | 实现 RAG 时再决（候选：LanceDB / Qdrant / pgvector） |
 
 ## 数据流：一次问答
 
-1. 客户端 `POST /chat` 携带 `providerId` + `messages`（+ 可选 `model`）
-2. Provider 层按 `providerId` 路由：要么走 native loop，要么委托给 Claude SDK passthrough
-3. Agent Loop 启动，初始消息进入推理
-4. LLM 决定调用 `retrieve` 工具 → RAG 模块查询向量库（必要时 rerank）
-5. 检索结果作为 tool result 回灌到对话
-6. （可选）LLM 调用 `web_search` 补充信息
-7. LLM 输出最终答复，通过 SSE 流式回客户端
+1. 客户端 `POST /chat` 携带 `message`（单条新 user 消息）+ 可选 `sessionId`；首轮无 `sessionId` 时必须给 `providerId`/`model`，daemon 会新建 session
+2. daemon 从 session store 读出历史 messages，把新 user 消息追加并落盘
+3. Provider 层按 session 的 `providerId` 路由：要么走 native loop，要么委托给 Claude SDK passthrough
+4. Agent Loop 启动，整段 messages 进入推理
+5. LLM 决定调用 `retrieve` 工具 → RAG 模块查询向量库（必要时 rerank）
+6. 检索结果作为 tool result 回灌到对话
+7. （可选）LLM 调用 `web_search` 补充信息
+8. LLM 输出最终答复，通过 SSE 流式回客户端；流结束后 daemon 把 assistant 文本追加进 session
+9. 响应头 `X-Atlas-Session-Id` 始终携带本轮 session id（新建/复用都给）
 
 ## 数据流：文档摄入
 
@@ -143,9 +148,9 @@ flowchart TB
 ## 待定项
 
 - 鉴权方案（本地无需，多端共用时怎么处理）
-- 会话与历史的持久化层（SQLite / Postgres）
 - 文档 ingest 的触发方式（CLI / UI 拖拽 / 文件夹 watcher）
 - 桌面端是否内嵌 daemon 进程，还是后台服务方式
 - 工具扩展机制（插件 / MCP / 内置）
+- 会话存储后端从 file 切到 PG / SQLite 的触发条件（当前 file 够用）
 
 > 待定项有结论时，更新本表并把决策迁到「关键决策」表。
