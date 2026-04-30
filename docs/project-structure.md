@@ -24,7 +24,14 @@ atlas/
 │       ├── package.json
 │       ├── tsconfig.json
 │       └── src/
-│           └── index.ts        # Hono app entry，目前只有 /health
+│           ├── index.ts        # buildApp + createDefaultRegistry（不带 IO 副作用）
+│           ├── server.ts       # Bun.serve 启动入口
+│           ├── http/           # HTTP 路由：/chat、/providers、SSE 编码
+│           └── providers/      # provider 抽象 + 凭据存储 + 各家 adapter
+│               ├── types.ts
+│               ├── registry.ts
+│               ├── credentials.ts
+│               └── adapters/   # 每家 provider 一个文件，例 claude-cli.ts
 └── docs/                       # 项目文档
     ├── CLAUDE.md               # docs/ 职责说明（工作目录在 docs/ 下时自动加载）
     ├── architecture/
