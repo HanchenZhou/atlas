@@ -3,13 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts",
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
     "test": "bun test",
     "check": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.6.0"
+    "@anthropic-ai/claude-agent-sdk": "^0.2.123",
+    "hono": "^4.6.0",
+    "zod": "^4.4.1"
   },
   "devDependencies": {
     "@types/bun": "latest",

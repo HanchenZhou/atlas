@@ -82,13 +82,25 @@ flowchart TB
 
 ## 模块边界
 
-| 模块 | 职责 | 关键依赖（候选） |
-|------|------|------------------|
-| HTTP API Layer | 对外接口、鉴权、SSE 流式输出 | Hono / Fastify |
-| Agent Loop | 推理循环、工具调度、终止条件、状态管理 | Vercel AI SDK |
+| 模块 | 职责 | 关键依赖 |
+|------|------|----------|
+| HTTP API Layer | 对外接口、SSE 流式输出 | Hono |
+| Provider 层 | LLM provider 抽象 + 凭据存储 + 各家 adapter（按 providerId 路由 chat 请求） | `@anthropic-ai/claude-agent-sdk` / Vercel AI SDK |
+| Agent Loop（Native） | 给非 Anthropic provider 跑的推理循环 / 工具调度 / 终止判定 | Vercel AI SDK |
 | Tool Registry | 工具注册、参数 schema 校验、并发执行、超时与重试 | Zod |
-| RAG / Retrieve | 查询改写、向量检索、rerank、上下文拼装 | 向量库 client |
+| RAG / Retrieve | 查询改写、向量检索、rerank、上下文拼装 | 向量库 client（待定） |
 | Ingest Pipeline | 文档解析、切分、embedding、写入向量库 | 解析库（按文档类型） |
+
+## 双轨 Agent 执行
+
+按 `providerId` 路由到两条执行路径，对外暴露**同一种 SSE 事件流**（`text-delta` / `tool-call` / `tool-result` / `done` / `error`）：
+
+| 路径 | 适用 provider | 实现 |
+|------|--------------|------|
+| **Native loop** | OpenAI / Qwen / GLM / Kimi / DeepSeek / Ollama | Atlas 自己跑 ReAct 循环，调 Vercel AI SDK 的 `streamText({ tools, maxSteps })` |
+| **Claude SDK passthrough** | `anthropic-claude-cli`（订阅模式） | 整轮 agent loop 委托给 `@anthropic-ai/claude-agent-sdk` 的 `query()`；spawn 时 env 必须**剥掉** `ANTHROPIC_API_KEY` 才能走订阅而非 API 计费 |
+
+不写统一的 loop 抽象去包两条路径——SDK 不暴露裸调 LLM 接口，强抽象只会做出个错位的中间层。
 
 ## 关键决策
 
@@ -104,16 +116,20 @@ flowchart TB
 | 复杂文档解析 | **允许独立工具/脚本** | Ingest 路径冷、可批处理；语言边界不影响主进程；Python/外部 CLI 都可用 |
 | Web 框架 | **Next.js** | 用户已确认 |
 | 桌面 | Electron（**当前阶段暂缓**） | 仅作为壳；与 daemon 通过 HTTP 通信；先把后端跑通再做 |
+| Agent Loop（native） | **Vercel AI SDK** | provider 抽象 + 流式 + tool calling + maxSteps 一站式；多家 LLM 不需要自己写 SSE 解析 |
+| Anthropic 订阅接入 | **Claude SDK passthrough** | 订阅 OAuth 凭据躺在本机 `claude` CLI 里，没有"裸调 LLM"接口可走；只能 spawn SDK 让它跑整轮 loop |
+| Provider 凭据存储 | **`~/.atlas/credentials.json` + 0600** | 早期单机单用户；不上 keychain（YAGNI），后续多端共享时再换 |
 | 向量库 | 待定 | 实现 RAG 时再决（候选：LanceDB / Qdrant / pgvector） |
 
 ## 数据流：一次问答
 
-1. 客户端 `POST /chat` 携带 query + conversation id
-2. Agent Loop 启动，初始消息进入推理
-3. LLM 决定调用 `retrieve` 工具 → RAG 模块查询向量库（必要时 rerank）
-4. 检索结果作为 tool result 回灌到对话
-5. （可选）LLM 调用 `web_search` 补充信息
-6. LLM 输出最终答复，通过 SSE 流式回客户端
+1. 客户端 `POST /chat` 携带 `providerId` + `messages`（+ 可选 `model`）
+2. Provider 层按 `providerId` 路由：要么走 native loop，要么委托给 Claude SDK passthrough
+3. Agent Loop 启动，初始消息进入推理
+4. LLM 决定调用 `retrieve` 工具 → RAG 模块查询向量库（必要时 rerank）
+5. 检索结果作为 tool result 回灌到对话
+6. （可选）LLM 调用 `web_search` 补充信息
+7. LLM 输出最终答复，通过 SSE 流式回客户端
 
 ## 数据流：文档摄入
 
