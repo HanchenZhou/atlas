@@ -1,4 +1,4 @@
-export type ProviderId = 'anthropic-claude-cli' | 'openai';
+export type ProviderId = 'anthropic-claude-cli' | 'openai' | 'kimi';
 
 export type ChatMessage = {
   role: 'user' | 'assistant' | 'system';

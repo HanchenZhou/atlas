@@ -33,7 +33,7 @@ atlas/
 │   │           ├── types.ts
 │   │           ├── registry.ts
 │   │           ├── credentials.ts
-│   │           └── adapters/   # 每家 provider 一个文件：claude-cli.ts / openai.ts
+│   │           └── adapters/   # 每家 provider 一个文件：claude-cli.ts / openai.ts / kimi.ts
 │   └── desktop/                # 桌面端（Electron + Vite + React）
 │       ├── electron.vite.config.ts
 │       ├── index.html

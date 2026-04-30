@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { ProviderRegistry } from './providers/registry';
 import { claudeCliProvider } from './providers/adapters/claude-cli';
 import { openaiProvider } from './providers/adapters/openai';
+import { kimiProvider } from './providers/adapters/kimi';
 import { CredentialStore } from './providers/credentials';
 import { providersRouter } from './http/providers';
 import { chatRouter } from './http/chat';
@@ -26,6 +27,7 @@ export function createDefaultRegistry(
   const r = new ProviderRegistry();
   r.register(claudeCliProvider());
   r.register(openaiProvider(credentials));
+  r.register(kimiProvider(credentials));
   return r;
 }
 

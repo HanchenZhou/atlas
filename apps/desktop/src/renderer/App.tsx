@@ -9,6 +9,7 @@ import { SettingsSheet } from './components/SettingsSheet';
 const DEFAULT_MODEL: Record<string, string> = {
   'anthropic-claude-cli': 'claude-sonnet-4-5',
   openai: 'gpt-4o-mini',
+  kimi: 'kimi-for-coding',
 };
 
 const client = new DaemonClient();
