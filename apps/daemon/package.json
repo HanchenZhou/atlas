@@ -9,11 +9,14 @@
     "check": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.54",
     "@anthropic-ai/claude-agent-sdk": "^0.2.123",
+    "ai": "^6.0.170",
     "hono": "^4.6.0",
     "zod": "^4.4.1"
   },
   "devDependencies": {
+    "@ai-sdk/provider": "^3.0.9",
     "@types/bun": "latest",
     "typescript": "^5.7.0"
   }

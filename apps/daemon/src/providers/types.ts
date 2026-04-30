@@ -1,4 +1,4 @@
-export type ProviderId = 'anthropic-claude-cli';
+export type ProviderId = 'anthropic-claude-cli' | 'openai';
 
 export type ChatMessage = {
   role: 'user' | 'assistant' | 'system';
@@ -44,4 +44,8 @@ export type Provider = {
   authMode: AuthMode;
   status(): Promise<ProviderStatus>;
   chat(req: ChatRequest): AsyncIterable<AgentEvent>;
+  /** Persist credentials. Throw on invalid input. Undefined = login not supported. */
+  login?(input: unknown): Promise<void>;
+  /** Clear credentials. Undefined = logout not supported. */
+  logout?(): Promise<void>;
 };

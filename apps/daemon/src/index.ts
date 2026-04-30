@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { ProviderRegistry } from './providers/registry';
 import { claudeCliProvider } from './providers/adapters/claude-cli';
+import { openaiProvider } from './providers/adapters/openai';
+import { CredentialStore } from './providers/credentials';
 import { providersRouter } from './http/providers';
 import { chatRouter } from './http/chat';
 
@@ -18,9 +20,12 @@ export function buildApp(opts: BuildAppOptions = {}): Hono {
   return app;
 }
 
-export function createDefaultRegistry(): ProviderRegistry {
+export function createDefaultRegistry(
+  credentials: CredentialStore = new CredentialStore(),
+): ProviderRegistry {
   const r = new ProviderRegistry();
   r.register(claudeCliProvider());
+  r.register(openaiProvider(credentials));
   return r;
 }
 

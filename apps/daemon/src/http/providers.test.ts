@@ -61,3 +61,78 @@ describe('GET /providers/:id/status', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('POST /providers/:id/login', () => {
+  it('returns 405 when provider does not support login (cli-passthrough)', async () => {
+    const app = appWith(fakeProvider());
+    const res = await app.request('/providers/anthropic-claude-cli/login', {
+      method: 'POST',
+      body: '{}',
+      headers: { 'content-type': 'application/json' },
+    });
+    expect(res.status).toBe(405);
+  });
+
+  it('forwards the body to provider.login and returns 200', async () => {
+    const captured: unknown[] = [];
+    const app = appWith(
+      fakeProvider({
+        authMode: 'apiKey',
+        login: async (input) => {
+          captured.push(input);
+        },
+      }),
+    );
+    const res = await app.request('/providers/anthropic-claude-cli/login', {
+      method: 'POST',
+      body: JSON.stringify({ apiKey: 'sk-test' }),
+      headers: { 'content-type': 'application/json' },
+    });
+    expect(res.status).toBe(200);
+    expect(captured).toEqual([{ apiKey: 'sk-test' }]);
+  });
+
+  it('returns 400 when provider.login throws', async () => {
+    const app = appWith(
+      fakeProvider({
+        authMode: 'apiKey',
+        login: async () => {
+          throw new Error('apiKey required');
+        },
+      }),
+    );
+    const res = await app.request('/providers/anthropic-claude-cli/login', {
+      method: 'POST',
+      body: '{}',
+      headers: { 'content-type': 'application/json' },
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('DELETE /providers/:id/credential', () => {
+  it('returns 405 when provider does not support logout', async () => {
+    const app = appWith(fakeProvider());
+    const res = await app.request('/providers/anthropic-claude-cli/credential', {
+      method: 'DELETE',
+    });
+    expect(res.status).toBe(405);
+  });
+
+  it('calls provider.logout and returns 204', async () => {
+    let calls = 0;
+    const app = appWith(
+      fakeProvider({
+        authMode: 'apiKey',
+        logout: async () => {
+          calls += 1;
+        },
+      }),
+    );
+    const res = await app.request('/providers/anthropic-claude-cli/credential', {
+      method: 'DELETE',
+    });
+    expect(res.status).toBe(204);
+    expect(calls).toBe(1);
+  });
+});

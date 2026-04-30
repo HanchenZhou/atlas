@@ -24,5 +24,37 @@ export function providersRouter(registry: ProviderRegistry): Hono {
     return c.json(await provider.status());
   });
 
+  app.post('/:id/login', async (c) => {
+    const provider = registry.get(c.req.param('id'));
+    if (!provider) {
+      return c.json({ error: 'unknown provider' }, 404);
+    }
+    if (!provider.login) {
+      return c.json(
+        { error: 'login not supported', authMode: provider.authMode },
+        405,
+      );
+    }
+    const body = await c.req.json().catch(() => ({}));
+    try {
+      await provider.login(body);
+      return c.json({ ok: true });
+    } catch (err) {
+      return c.json({ error: (err as Error).message }, 400);
+    }
+  });
+
+  app.delete('/:id/credential', async (c) => {
+    const provider = registry.get(c.req.param('id'));
+    if (!provider) {
+      return c.json({ error: 'unknown provider' }, 404);
+    }
+    if (!provider.logout) {
+      return c.json({ error: 'logout not supported' }, 405);
+    }
+    await provider.logout();
+    return c.body(null, 204);
+  });
+
   return app;
 }
