@@ -35,6 +35,8 @@ atlas/
 │   │       │   ├── registry.ts
 │   │       │   ├── credentials.ts
 │   │       │   └── adapters/   # 每家 provider 一个文件：claude-cli.ts / openai.ts / kimi.ts
+│   │       ├── roles/          # 多 agent 角色解析（defaults + role 覆盖）
+│   │       ├── tasks/          # 单次 LLM 调用任务（title 等）：runOneShot 助手 + 各任务实现
 │   │       └── sessions/       # 会话存储；当前仅 FileSessionStore（一会话一 JSON）
 │   └── desktop/                # 桌面端（Electron + Vite + React）
 │       ├── electron.vite.config.ts

@@ -5,6 +5,7 @@ import { claudeCliProvider } from './providers/adapters/claude-cli';
 import { openaiProvider } from './providers/adapters/openai';
 import { kimiProvider } from './providers/adapters/kimi';
 import { CredentialStore } from './providers/credentials';
+import { RoleResolver } from './roles/resolver';
 import { FileSessionStore } from './sessions/store';
 import { providersRouter } from './http/providers';
 import { chatRouter } from './http/chat';
@@ -13,10 +14,11 @@ import { sessionsRouter } from './http/sessions';
 export type BuildAppOptions = {
   registry: ProviderRegistry;
   sessions: FileSessionStore;
+  roles: RoleResolver;
 };
 
 export function buildApp(opts: BuildAppOptions): Hono {
-  const { registry, sessions } = opts;
+  const { registry, sessions, roles } = opts;
   const app = new Hono();
   app.use(
     '*',
@@ -28,7 +30,7 @@ export function buildApp(opts: BuildAppOptions): Hono {
   );
   app.get('/health', (c) => c.json({ status: 'ok' }));
   app.route('/providers', providersRouter(registry));
-  app.route('/chat', chatRouter(registry, sessions));
+  app.route('/chat', chatRouter(registry, sessions, roles));
   app.route('/sessions', sessionsRouter(sessions));
   return app;
 }

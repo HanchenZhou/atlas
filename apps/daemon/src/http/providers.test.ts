@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { buildApp } from '../index';
 import type { Provider } from '../providers/types';
 import { ProviderRegistry } from '../providers/registry';
+import { RoleResolver } from '../roles/resolver';
 import { FileSessionStore } from '../sessions/store';
 
 let sessionsDir: string;
@@ -33,7 +34,11 @@ function fakeProvider(overrides: Partial<Provider> = {}): Provider {
 function appWith(p: Provider): ReturnType<typeof buildApp> {
   const registry = new ProviderRegistry();
   registry.register(p);
-  return buildApp({ registry, sessions: new FileSessionStore(sessionsDir) });
+  return buildApp({
+    registry,
+    sessions: new FileSessionStore(sessionsDir),
+    roles: new RoleResolver({}, {}),
+  });
 }
 
 describe('GET /providers', () => {

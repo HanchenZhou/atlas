@@ -102,6 +102,19 @@ flowchart TB
 
 不写统一的 loop 抽象去包两条路径——SDK 不暴露裸调 LLM 接口，强抽象只会做出个错位的中间层。
 
+## 多 agent 与一次性任务
+
+未来会出现多个角色（plan / build / title / summary / compaction），但它们不是同一种东西，分两层：
+
+| 层 | 角色 | 特性 |
+|----|------|------|
+| **agents/**（loop） | plan、build | 多步推理、可调工具、产出 SSE 事件 |
+| **tasks/**（one-shot） | title、summary、compaction | 单次 LLM 调用、输入→字符串/对象、无 tool registry |
+
+两层共用底层 provider，但接口形状不同。**所有调用都通过 `RoleResolver.resolve(name)` 拿 `{ providerId, model }`**，调用方不直接读 config。这让"给 title 单独配个便宜模型"成为一行 config 改动。
+
+当前已落地：`title`（首轮 user+assistant 后异步生成会话标题）。
+
 ## 关键决策
 
 | 决策 | 选择 | 理由 |
@@ -119,7 +132,8 @@ flowchart TB
 | Agent Loop（native） | **Vercel AI SDK** | provider 抽象 + 流式 + tool calling + maxSteps 一站式；多家 LLM 不需要自己写 SSE 解析 |
 | Anthropic 订阅接入 | **Claude SDK passthrough** | 订阅 OAuth 凭据躺在本机 `claude` CLI 里，没有"裸调 LLM"接口可走；只能 spawn SDK 让它跑整轮 loop |
 | 应用数据目录 | **`~/.atlas/`**（可由 `ATLAS_HOME` 覆盖） | 单一 root 收纳配置 / 凭据 / 会话；环境变量覆盖便于测试隔离与多 profile |
-| 应用配置 | **`~/.atlas/config.json`** | 起步只放 daemon port、默认 provider/model、`sessions.dir`；hand-edit 即可 |
+| 应用配置 | **`~/.atlas/config.json`** | 起步放 daemon port、`defaults` provider/model、`sessions.dir`、`roles` 表；hand-edit 即可 |
+| 多 agent 路由 | **role-based 配置** | `defaults` 给底，`roles.<name>` 单条覆盖 providerId/model；调用方走 `RoleResolver.resolve(name)`，不直接拼 providerId |
 | Provider 凭据存储 | **`~/.atlas/credentials.json` + 0600** | 早期单机单用户；不上 keychain（YAGNI），后续多端共享时再换 |
 | 会话持久化 | **per-session JSON 文件**（默认 `~/.atlas/sessions/<id>.json`） | 一会话一文件、原子 rename 写入；本地几百会话足够；`config.sessions.dir` 可改路径，未来要 PG 直接换 store 实现 |
 | 向量库 | 待定 | 实现 RAG 时再决（候选：LanceDB / Qdrant / pgvector） |

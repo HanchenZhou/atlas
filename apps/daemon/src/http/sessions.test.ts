@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildApp } from '../index';
 import { ProviderRegistry } from '../providers/registry';
+import { RoleResolver } from '../roles/resolver';
 import { FileSessionStore, type Session, type SessionSummary } from '../sessions/store';
 
 let dir: string;
@@ -13,7 +14,11 @@ let app: ReturnType<typeof buildApp>;
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'atlas-sessions-http-'));
   store = new FileSessionStore(dir);
-  app = buildApp({ registry: new ProviderRegistry(), sessions: store });
+  app = buildApp({
+    registry: new ProviderRegistry(),
+    sessions: store,
+    roles: new RoleResolver({}, {}),
+  });
 });
 
 afterEach(() => {

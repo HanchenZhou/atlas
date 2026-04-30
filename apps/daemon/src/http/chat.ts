@@ -2,7 +2,9 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import type { ProviderRegistry } from '../providers/registry';
 import type { AgentEvent, ProviderId } from '../providers/types';
+import type { RoleResolver } from '../roles/resolver';
 import type { FileSessionStore, Session } from '../sessions/store';
+import { generateTitle } from '../tasks/title';
 import { sseStream } from './sse';
 
 const chatRequestSchema = z.object({
@@ -18,6 +20,7 @@ const chatRequestSchema = z.object({
 export function chatRouter(
   registry: ProviderRegistry,
   store: FileSessionStore,
+  roles: RoleResolver,
 ): Hono {
   const app = new Hono();
 
@@ -69,7 +72,11 @@ export function chatRouter(
     const sessionId = session.id;
     const persisted = persistAssistant(events, async (text) => {
       if (text.length === 0) return;
-      await store.appendMessage(sessionId, { role: 'assistant', content: text });
+      const updated = await store.appendMessage(sessionId, {
+        role: 'assistant',
+        content: text,
+      });
+      maybeGenerateTitle(updated, registry, roles, store);
     });
 
     return new Response(sseStream(persisted), {
@@ -102,4 +109,34 @@ async function* persistAssistant(
       console.error('failed to persist assistant message:', err);
     }
   }
+}
+
+function maybeGenerateTitle(
+  session: Session,
+  registry: ProviderRegistry,
+  roles: RoleResolver,
+  store: FileSessionStore,
+): void {
+  const [first, second] = session.messages;
+  if (
+    session.messages.length !== 2 ||
+    first?.role !== 'user' ||
+    second?.role !== 'assistant'
+  ) {
+    return;
+  }
+  if (!roles.resolve('title').providerId) return;
+
+  void generateTitle({
+    registry,
+    resolver: roles,
+    query: first.content,
+    reply: second.content,
+  })
+    .then((title) => {
+      if (title.length > 0) return store.setTitle(session.id, title);
+    })
+    .catch((err) => {
+      console.error('title generation failed:', err);
+    });
 }
