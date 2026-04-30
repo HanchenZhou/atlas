@@ -113,7 +113,9 @@ flowchart TB
 
 两层共用底层 provider，但接口形状不同。**所有调用都通过 `RoleResolver.resolve(name)` 拿 `{ providerId, model }`**，调用方不直接读 config。这让"给 title 单独配个便宜模型"成为一行 config 改动。
 
-当前已落地：`title`（首轮 user+assistant 后异步生成会话标题）。
+当前已落地：
+- `title`（首轮 user+assistant 后异步生成会话标题）
+- `compaction`（每轮调 provider 前估字符数；超阈值时把"老消息"换成一条 `system` 总结，保留最近 K 条原文）
 
 ## 关键决策
 
