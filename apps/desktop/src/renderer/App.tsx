@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo } from 'react';
-import { DaemonClient, type ChatMessage } from './client/daemon';
+import { DaemonClient } from './client/daemon';
 import { useAtlas } from './state/useAtlas';
 import { Sidebar } from './components/Sidebar';
 import { Chat } from './components/Chat';
@@ -27,12 +27,22 @@ export function App() {
     }
   }, [dispatch]);
 
+  const refreshSessions = useCallback(async () => {
+    try {
+      const sessions = await client.listSessions();
+      dispatch({ type: 'sessions/set', sessions });
+    } catch {
+      // daemon polling already surfaces unreachability; swallow here.
+    }
+  }, [dispatch]);
+
   // Initial fetch + poll lightly so reconnect is automatic.
   useEffect(() => {
     refreshProviders();
+    refreshSessions();
     const t = setInterval(refreshProviders, 10_000);
     return () => clearInterval(t);
-  }, [refreshProviders]);
+  }, [refreshProviders, refreshSessions]);
 
   const activeProvider = useMemo(
     () => state.providers.find((p) => p.id === state.activeProviderId),
@@ -45,7 +55,30 @@ export function App() {
       (p) => p.id === state.activeProviderId,
     );
     const next = state.providers[(idx + 1) % state.providers.length];
-    if (next) dispatch({ type: 'provider/activate', id: next.id });
+    if (!next) return;
+    // A session is sticky to its provider on the daemon side, so switching
+    // providers implicitly starts a new chat.
+    if (state.currentSessionId) dispatch({ type: 'session/new' });
+    dispatch({ type: 'provider/activate', id: next.id });
+  };
+
+  const selectSession = async (id: string) => {
+    try {
+      const session = await client.getSession(id);
+      if (session) dispatch({ type: 'session/load', session });
+    } catch {
+      // ignore — user can retry.
+    }
+  };
+
+  const deleteSession = async (id: string) => {
+    try {
+      await client.deleteSession(id);
+      if (state.currentSessionId === id) dispatch({ type: 'session/new' });
+      await refreshSessions();
+    } catch {
+      // ignore — user can retry.
+    }
   };
 
   const send = async (content: string) => {
@@ -54,17 +87,21 @@ export function App() {
     const assistantId = crypto.randomUUID();
     dispatch({ type: 'message/start-assistant', id: assistantId });
 
-    const history: ChatMessage[] = [
-      ...state.messages.map((m) => ({ role: m.role, content: m.content })),
-      { role: 'user', content },
-    ];
+    const wasNewSession = state.currentSessionId === null;
 
     try {
-      for await (const event of client.chat({
+      const { sessionId, events } = await client.chat({
+        sessionId: state.currentSessionId ?? undefined,
         providerId: activeProvider.id,
         model: DEFAULT_MODEL[activeProvider.id],
-        messages: history,
-      })) {
+        message: { role: 'user', content },
+      });
+
+      if (wasNewSession) {
+        dispatch({ type: 'session/set-current', id: sessionId });
+      }
+
+      for await (const event of events) {
         if (event.type === 'text-delta') {
           dispatch({
             type: 'message/append-delta',
@@ -87,6 +124,7 @@ export function App() {
       });
     } finally {
       dispatch({ type: 'message/finish-assistant', id: assistantId });
+      refreshSessions();
     }
   };
 
@@ -95,7 +133,11 @@ export function App() {
       <Sidebar
         providers={state.providers}
         activeProviderId={state.activeProviderId}
-        onNewChat={() => dispatch({ type: 'messages/clear' })}
+        sessions={state.sessions}
+        currentSessionId={state.currentSessionId}
+        onNewChat={() => dispatch({ type: 'session/new' })}
+        onSelectSession={selectSession}
+        onDeleteSession={deleteSession}
         onOpenSettings={() => dispatch({ type: 'settings/toggle', show: true })}
         onCycleProvider={cycleProvider}
       />

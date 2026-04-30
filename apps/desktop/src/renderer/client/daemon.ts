@@ -24,9 +24,33 @@ export type ProviderInfo = {
   status: { loggedIn: boolean; detail?: string };
 };
 
-export type ChatMessage = {
+export type SessionMessage = {
   role: 'user' | 'assistant' | 'system';
   content: string;
+};
+
+export type SessionSummary = {
+  id: string;
+  title: string;
+  providerId: string;
+  model?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Session = SessionSummary & { messages: SessionMessage[] };
+
+export type ChatRequest = {
+  sessionId?: string;
+  providerId?: string;
+  model?: string;
+  message: { role: 'user'; content: string };
+  signal?: AbortSignal;
+};
+
+export type ChatResponse = {
+  sessionId: string;
+  events: AsyncIterable<AgentEvent>;
 };
 
 const DEFAULT_BASE_URL = 'http://localhost:3001';
@@ -62,49 +86,77 @@ export class DaemonClient {
     }
   }
 
-  async *chat(req: {
-    providerId: string;
-    model?: string;
-    messages: ChatMessage[];
-    signal?: AbortSignal;
-  }): AsyncIterable<AgentEvent> {
+  async listSessions(): Promise<SessionSummary[]> {
+    const res = await fetch(`${this.baseUrl}/sessions`);
+    if (!res.ok) throw new Error(`GET /sessions failed: ${res.status}`);
+    return (await res.json()) as SessionSummary[];
+  }
+
+  async getSession(id: string): Promise<Session | undefined> {
+    const res = await fetch(`${this.baseUrl}/sessions/${id}`);
+    if (res.status === 404) return undefined;
+    if (!res.ok) throw new Error(`GET /sessions/${id} failed: ${res.status}`);
+    return (await res.json()) as Session;
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    const res = await fetch(`${this.baseUrl}/sessions/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok && res.status !== 204) {
+      throw new Error(`DELETE /sessions/${id} failed: ${res.status}`);
+    }
+  }
+
+  async chat(req: ChatRequest): Promise<ChatResponse> {
+    const body: Record<string, unknown> = { message: req.message };
+    if (req.sessionId) body.sessionId = req.sessionId;
+    if (req.providerId) body.providerId = req.providerId;
+    if (req.model) body.model = req.model;
+
     const res = await fetch(`${this.baseUrl}/chat`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        providerId: req.providerId,
-        ...(req.model && { model: req.model }),
-        messages: req.messages,
-      }),
+      body: JSON.stringify(body),
       ...(req.signal && { signal: req.signal }),
     });
 
     if (!res.ok || !res.body) {
-      const body = (await res.json().catch(() => ({}))) as { error?: string };
-      yield { type: 'error', message: body.error ?? `chat failed: ${res.status}` };
-      return;
+      const errBody = (await res.json().catch(() => ({}))) as {
+        error?: string;
+      };
+      throw new Error(errBody.error ?? `chat failed: ${res.status}`);
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
+    const sessionId = res.headers.get('x-atlas-session-id');
+    if (!sessionId) {
+      throw new Error('daemon did not return X-Atlas-Session-Id header');
+    }
 
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const parsed = parseSseFrames(buffer);
-        buffer = parsed.remaining;
-        for (const event of parsed.events) yield event;
-      }
-      // Flush final decoder buffer + any remaining frame.
-      buffer += decoder.decode();
+    return { sessionId, events: streamEvents(res.body) };
+  }
+}
+
+async function* streamEvents(
+  body: ReadableStream<Uint8Array>,
+): AsyncIterable<AgentEvent> {
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
       const parsed = parseSseFrames(buffer);
+      buffer = parsed.remaining;
       for (const event of parsed.events) yield event;
-    } finally {
-      reader.releaseLock();
     }
+    buffer += decoder.decode();
+    const parsed = parseSseFrames(buffer);
+    for (const event of parsed.events) yield event;
+  } finally {
+    reader.releaseLock();
   }
 }
 
@@ -149,3 +201,4 @@ function parseFrame(frame: string): AgentEvent | null {
   }
   return { type: eventType, ...payload } as AgentEvent;
 }
+

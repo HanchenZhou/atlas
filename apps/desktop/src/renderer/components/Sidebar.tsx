@@ -1,10 +1,14 @@
-import type { ProviderInfo } from '../client/daemon';
-import { GearIcon, PlusIcon } from './icons';
+import type { ProviderInfo, SessionSummary } from '../client/daemon';
+import { GearIcon, PlusIcon, TrashIcon } from './icons';
 
 type Props = {
   providers: ProviderInfo[];
   activeProviderId: string | null;
+  sessions: SessionSummary[];
+  currentSessionId: string | null;
   onNewChat(): void;
+  onSelectSession(id: string): void;
+  onDeleteSession(id: string): void;
   onOpenSettings(): void;
   onCycleProvider(): void;
 };
@@ -12,7 +16,11 @@ type Props = {
 export function Sidebar({
   providers,
   activeProviderId,
+  sessions,
+  currentSessionId,
   onNewChat,
+  onSelectSession,
+  onDeleteSession,
   onOpenSettings,
   onCycleProvider,
 }: Props) {
@@ -32,9 +40,19 @@ export function Sidebar({
 
       <div className="group-label">Conversations</div>
       <div className="convo-list">
-        <div className="empty-hint">
-          No saved chats yet — history will appear here once persistence lands.
-        </div>
+        {sessions.length === 0 ? (
+          <div className="empty-hint">No conversations yet.</div>
+        ) : (
+          sessions.map((s) => (
+            <SessionItem
+              key={s.id}
+              session={s}
+              active={s.id === currentSessionId}
+              onSelect={() => onSelectSession(s.id)}
+              onDelete={() => onDeleteSession(s.id)}
+            />
+          ))
+        )}
       </div>
 
       <div className="sidebar-foot">
@@ -52,5 +70,43 @@ export function Sidebar({
         </button>
       </div>
     </aside>
+  );
+}
+
+function SessionItem({
+  session,
+  active,
+  onSelect,
+  onDelete,
+}: {
+  session: SessionSummary;
+  active: boolean;
+  onSelect(): void;
+  onDelete(): void;
+}) {
+  const label = session.title.trim() || 'Untitled chat';
+  return (
+    <div className={`convo-item${active ? ' active' : ''}`}>
+      <button
+        type="button"
+        className="convo-label"
+        onClick={onSelect}
+        title={label}
+      >
+        {label}
+      </button>
+      <button
+        type="button"
+        className="convo-delete"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        aria-label="Delete chat"
+        title="Delete chat"
+      >
+        <TrashIcon />
+      </button>
+    </div>
   );
 }
