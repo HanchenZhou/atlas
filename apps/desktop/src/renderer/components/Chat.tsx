@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { ChatTurn } from '../state/useAtlas';
 import type { ProviderInfo } from '../client/daemon';
 import { Markdown } from './Markdown';
+import { TaskChecklist } from './TaskChecklist';
 
 type Props = {
   messages: ChatTurn[];
@@ -39,21 +40,29 @@ export function Chat({ messages, streaming, activeProvider }: Props) {
             </p>
           </div>
         ) : (
-          messages.map((m, i) => (
-            <div key={m.id} className={`msg ${m.role}`}>
-              <div className="role">{m.role === 'user' ? 'You' : 'Atlas'}</div>
-              <div className="content">
-                {m.role === 'assistant' ? (
-                  <Markdown>{m.content}</Markdown>
-                ) : (
-                  m.content
-                )}
-                {streaming && i === messages.length - 1 && m.role === 'assistant' && (
-                  <span className="caret" aria-hidden="true" />
-                )}
+          messages.map((m, i) => {
+            const isLast = i === messages.length - 1;
+            const showCaret =
+              streaming && isLast && m.role === 'assistant' && !m.plan;
+            return (
+              <div key={m.id} className={`msg ${m.role}`}>
+                <div className="role">{m.role === 'user' ? 'You' : 'Atlas'}</div>
+                <div className="content">
+                  {m.role === 'assistant' && m.plan ? (
+                    <TaskChecklist
+                      tasks={m.plan.tasks}
+                      streaming={streaming && isLast}
+                    />
+                  ) : m.role === 'assistant' ? (
+                    <Markdown>{m.content}</Markdown>
+                  ) : (
+                    m.content
+                  )}
+                  {showCaret && <span className="caret" aria-hidden="true" />}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </>

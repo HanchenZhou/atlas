@@ -253,6 +253,70 @@ button { font: inherit; }
 .convo-item.active .convo-delete { opacity: 1; }
 .convo-delete:hover { background: var(--card-hover); color: var(--danger, #d93b3b); }
 
+/* ── task checklist ───────────────────────────────────────── */
+.task-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+.task-item {
+  border: 1px solid var(--border-faint, rgba(0, 0, 0, 0.08));
+  border-radius: 8px;
+  background: var(--card, transparent);
+  overflow: hidden;
+}
+
+.task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+}
+.task-row:disabled { cursor: default; }
+.task-row:hover:not(:disabled) { background: var(--card-hover); }
+
+.task-status {
+  flex: none;
+  width: 16px;
+  text-align: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-mute);
+}
+.status-running .task-status { color: var(--accent); }
+.status-done .task-status { color: #6aa84f; }
+.status-failed .task-status { color: var(--danger, #d93b3b); }
+
+.task-title {
+  flex: 1;
+  font-size: 13.5px;
+  color: var(--text);
+}
+.status-pending .task-title { color: var(--text-mute); }
+
+.task-toggle {
+  flex: none;
+  color: var(--text-faint);
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+}
+
+.task-result {
+  padding: 8px 14px 12px 38px;
+  border-top: 1px solid var(--border-faint, rgba(0, 0, 0, 0.06));
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
 .empty-hint {
   padding: 10px 14px;
   font-size: 12.5px;

@@ -1,5 +1,11 @@
+export type PlanTask = {
+  id: string;
+  title: string;
+  hint?: string;
+};
+
 export type AgentEvent =
-  | { type: 'text-delta'; text: string }
+  | { type: 'text-delta'; text: string; taskId?: string }
   | { type: 'tool-call'; id: string; name: string; args: unknown }
   | {
       type: 'tool-result';
@@ -8,6 +14,9 @@ export type AgentEvent =
       result?: unknown;
       error?: string;
     }
+  | { type: 'plan'; tasks: PlanTask[] }
+  | { type: 'task-start'; id: string }
+  | { type: 'task-done'; id: string; ok: boolean }
   | {
       type: 'done';
       sessionId?: string;
@@ -16,6 +25,14 @@ export type AgentEvent =
       billing?: 'subscription' | 'api';
     }
   | { type: 'error'; message: string };
+
+export type TaskRecord = {
+  id: string;
+  title: string;
+  hint?: string;
+  status: 'done' | 'failed';
+  result: string;
+};
 
 export type ProviderInfo = {
   id: string;
@@ -27,6 +44,7 @@ export type ProviderInfo = {
 export type SessionMessage = {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  plan?: { tasks: TaskRecord[] };
 };
 
 export type SessionSummary = {
