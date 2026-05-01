@@ -103,10 +103,39 @@ export function App() {
 
       for await (const event of events) {
         if (event.type === 'text-delta') {
+          if (event.taskId) {
+            dispatch({
+              type: 'message/task-delta',
+              id: assistantId,
+              taskId: event.taskId,
+              text: event.text,
+            });
+          } else {
+            dispatch({
+              type: 'message/append-delta',
+              id: assistantId,
+              text: event.text,
+            });
+          }
+        } else if (event.type === 'plan') {
           dispatch({
-            type: 'message/append-delta',
+            type: 'message/attach-plan',
             id: assistantId,
-            text: event.text,
+            tasks: event.tasks,
+          });
+        } else if (event.type === 'task-start') {
+          dispatch({
+            type: 'message/task-status',
+            id: assistantId,
+            taskId: event.id,
+            status: 'running',
+          });
+        } else if (event.type === 'task-done') {
+          dispatch({
+            type: 'message/task-status',
+            id: assistantId,
+            taskId: event.id,
+            status: event.ok ? 'done' : 'failed',
           });
         } else if (event.type === 'error') {
           dispatch({

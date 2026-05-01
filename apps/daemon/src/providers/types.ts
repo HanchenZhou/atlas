@@ -13,7 +13,7 @@ export type ChatRequest = {
 };
 
 export type AgentEvent =
-  | { type: 'text-delta'; text: string }
+  | { type: 'text-delta'; text: string; taskId?: string }
   | { type: 'tool-call'; id: string; name: string; args: unknown }
   | {
       type: 'tool-result';
@@ -22,6 +22,12 @@ export type AgentEvent =
       result?: unknown;
       error?: string;
     }
+  | {
+      type: 'plan';
+      tasks: Array<{ id: string; title: string; hint?: string }>;
+    }
+  | { type: 'task-start'; id: string }
+  | { type: 'task-done'; id: string; ok: boolean }
   | {
       type: 'done';
       sessionId?: string;

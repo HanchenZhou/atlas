@@ -1,9 +1,11 @@
 import { mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import type { TaskRecord } from '../agents/types';
 
 export type SessionMessage = {
   role: 'user' | 'assistant' | 'system';
   content: string;
+  plan?: { tasks: TaskRecord[] };
 };
 
 export type Session = {

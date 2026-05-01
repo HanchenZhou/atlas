@@ -30,6 +30,7 @@ atlas/
 │   │       ├── http/           # HTTP 路由：/chat、/providers、/sessions、SSE 编码
 │   │       ├── agent/          # native agent loop（Vercel AI SDK），非 Claude 路径用
 │   │       │   └── loop.ts
+│   │       ├── agents/         # 多 agent 编排：plan / build / orchestrator，/chat 走这层
 │   │       ├── providers/      # provider 抽象 + 凭据存储 + 各家 adapter
 │   │       │   ├── types.ts
 │   │       │   ├── registry.ts

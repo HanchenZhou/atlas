@@ -116,6 +116,9 @@ flowchart TB
 当前已落地：
 - `title`（首轮 user+assistant 后异步生成会话标题）
 - `compaction`（每轮调 provider 前估字符数；超阈值时把"老消息"换成一条 `system` 总结，保留最近 K 条原文）
+- `plan` + `build`（每轮 chat 由 orchestrator 串接：plan 输出结构化 task list 或决定 `direct`；非 direct 时 build 按 task 顺序调 provider，把前面 task 的结果灌进后续 prompt）
+
+`/chat` 现在统一走 `agents/orchestrator.ts`，不再裸调 provider。direct 路径退化成"single shot"，对外行为与改造前一致；planned 路径额外发 `plan` / `task-start` / `task-done` 事件，`text-delta` 多带一个 `taskId` 字段。session 存储里 assistant 那条消息可以挂 `plan: { tasks: TaskRecord[] }`，UI 重新打开会话能恢复 task checklist。
 
 ## 关键决策
 
