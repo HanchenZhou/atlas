@@ -439,33 +439,34 @@ button { font: inherit; }
 
 .msg {
   max-width: 720px;
-  margin: 0 auto 28px;
+  margin: 0 auto 22px;
   padding: 0 32px;
-}
-.msg .role {
-  font-size: 12px;
-  color: var(--text-mute);
-  margin-bottom: 8px;
-  font-weight: 500;
   display: flex;
-  align-items: center;
-  gap: 8px;
 }
-.msg.assistant .role::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--accent);
-}
+.msg.assistant { justify-content: flex-start; }
+.msg.user { justify-content: flex-end; }
+
 .msg .content {
   font-size: 14.5px;
   line-height: 1.72;
   color: var(--text);
 }
-/* user messages are plain text — preserve typed line breaks */
+
+/* assistant: flowing text, full reading width */
+.msg.assistant .content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* user: right-aligned rounded bubble with subtle tint */
 .msg.user .content {
   white-space: pre-wrap;
+  max-width: 80%;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  border-radius: 14px 14px 4px 14px;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 /* inline code (also applies to <code> inside <pre>, overridden below) */
