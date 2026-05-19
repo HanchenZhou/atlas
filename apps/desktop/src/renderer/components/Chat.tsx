@@ -46,7 +46,6 @@ export function Chat({ messages, streaming, activeProvider }: Props) {
               streaming && isLast && m.role === 'assistant' && !m.plan;
             return (
               <div key={m.id} className={`msg ${m.role}`}>
-                <div className="role">{m.role === 'user' ? 'You' : 'Atlas'}</div>
                 <div className="content">
                   {m.role === 'assistant' && m.plan ? (
                     <TaskChecklist
